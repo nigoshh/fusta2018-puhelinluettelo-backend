@@ -1,8 +1,13 @@
 const express = require('express')
-const app = express()
 const bodyParser = require('body-parser')
+const morgan = require('morgan')
+const app = express()
 
 app.use(bodyParser.json())
+morgan.token('body', (req, res) => JSON.stringify(req.body))
+app.use(morgan(
+  ':method :url :body :status :res[content-length] - :response-time ms'
+))
 
 let persons = [
   {
@@ -93,6 +98,12 @@ const findById = (id) => persons.find(p => p.id === id)
 const findByName = (name) => persons.find(p => p.name === name)
 
 const append = (str1, str2) => str1 ? (str1+', '+str2) : str2
+
+const unknownRoute = (req, res) => res.status(404).send({
+  error: 'unknown endpoint'
+})
+
+app.use(unknownRoute)
 
 const PORT = 3001
 app.listen(PORT, () => {
