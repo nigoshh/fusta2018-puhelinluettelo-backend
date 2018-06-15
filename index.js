@@ -1,7 +1,8 @@
-const express = require('express')
 const bodyParser = require('body-parser')
-const morgan = require('morgan')
 const cors = require('cors')
+const express = require('express')
+const morgan = require('morgan')
+const Person = require('./models/person')
 const app = express()
 
 app.use(express.static('build'))
@@ -12,48 +13,34 @@ app.use(morgan(
   ':method :url :body :status :res[content-length] - :response-time ms'
 ))
 
-let persons = [
-  {
-    name: 'Arto Hellas',
-    number: '040-123456',
-    id: 1
-  },
-  {
-    name: 'Martti Tienari',
-    number: '040-123456',
-    id: 2
-  },
-  {
-    name: 'Arto Järvinen',
-    number: '040-123456',
-    id: 3
-  },
-  {
-    name: 'Lea Kutvonen',
-    number: '040-123456',
-    id: 4
-  }
-]
+app.get('/info', (req, res) =>
+  Person
+    .find({})
+    .then(persons =>
+      res.send(
+        `<p>puhelinluettelossa ${persons.length} henkilön tiedot</p>`+
+        `<p>${new Date()}</p>`
+      )
+    )
+)
 
-app.get('/info', (req, res) => {
-  res.send(
-    `<p>puhelinluettelossa ${persons.length} henkilön tiedot</p>`+
-    `<p>${new Date()}</p>`)
-})
+app.get('/api/persons', (req, res) =>
+  Person
+    .find({})
+    .then(persons => res.json(persons.map(Person.format)))
+)
 
-app.get('/api/persons', (req, res) => {
-  res.json(persons)
-})
-
-app.get('/api/persons/:id', (req, res) => {
-  const id = Number(req.params.id)
-  const person = findById(id)
-  if (person) {
-    res.json(person)
-  } else {
-    res.status(404).end()
-  }
-})
+app.get('/api/persons/:id', (req, res) =>
+  Person
+    .findById(req.params.id)
+    .then(person =>
+      person ?
+        res.json(Person.format(person))
+      :
+        res.status(404).end()
+    )
+    .catch(() => res.status(400).send({ error: 'malformatted id' }))
+)
 
 app.post('/api/persons', (req, res) => {
   const name = req.body.name
@@ -61,44 +48,42 @@ app.post('/api/persons', (req, res) => {
   let error = '';
   if (!name)
     error += 'name missing'
-  else if (findByName(name) !== undefined)
-    error = append(error, 'name must be unique')
   if (!number)
     error = append(error, 'number missing')
   if (error)
     res.status(400).json({ error })
-  else {
-    const person = {
-      name,
-      number,
-      id: generateId()
-    }
-    persons = persons.concat(person)
-    res.status(201).json(person)
-  }
+  else
+    new Person({ name, number })
+      .save()
+      .then(savedPerson => res.status(201).json(Person.format(savedPerson)))
+      .catch(() => res.status(400).json({ error: 'name must be unique' }))
 })
 
-app.delete('/api/persons/:id', (req, res) => {
-  const id = Number(req.params.id)
-  const newPersons = persons.filter(p => p.id !== id)
-  if (newPersons.length < persons.length) {
-    res.status(204).end()
-  } else {
-    res.status(404).end()
-  }
-  persons = newPersons
+app.put('/api/persons/:id', (req, res) => {
+  const { name, number } = req.body
+  const person = { name, number }
+  Person
+    .findByIdAndUpdate(req.params.id, person, { new: true })
+    .then(updatedPerson =>
+      updatedPerson ?
+        res.json(Person.format(updatedPerson))
+      :
+        res.status(404).end()
+    )
+    .catch(error => res.status(400).send({ error: 'malformatted id' }))
 })
 
-const generateId = () => {
-  let id = undefined
-  do id = Math.floor(Math.random() * 100000)
-  while (findById(id) !== undefined)
-  return id
-}
-
-const findById = (id) => persons.find(p => p.id === id)
-
-const findByName = (name) => persons.find(p => p.name === name)
+app.delete('/api/persons/:id', (req, res) =>
+  Person
+    .findByIdAndRemove(req.params.id)
+    .then(removedPerson =>
+      removedPerson ?
+        res.status(204).end()
+      :
+        res.status(404).end()
+    )
+    .catch(() => res.status(400).send({ error: 'malformatted id' }))
+)
 
 const append = (str1, str2) => str1 ? (str1+', '+str2) : str2
 
@@ -109,6 +94,4 @@ const unknownRoute = (req, res) => res.status(404).send({
 app.use(unknownRoute)
 
 const PORT = process.env.PORT || 3001
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-})
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
