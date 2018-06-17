@@ -8,7 +8,7 @@ const app = express()
 app.use(express.static('build'))
 app.use(cors())
 app.use(bodyParser.json())
-morgan.token('body', (req, res) => JSON.stringify(req.body))
+morgan.token('body', req => JSON.stringify(req.body))
 app.use(morgan(
   ':method :url :body :status :res[content-length] - :response-time ms'
 ))
@@ -36,7 +36,7 @@ app.get('/api/persons/:id', (req, res) =>
     .then(person =>
       person ?
         res.json(Person.format(person))
-      :
+        :
         res.status(404).end()
     )
     .catch(() => res.status(400).send({ error: 'malformatted id' }))
@@ -45,7 +45,7 @@ app.get('/api/persons/:id', (req, res) =>
 app.post('/api/persons', (req, res) => {
   const name = req.body.name
   const number = req.body.number
-  let error = '';
+  let error = ''
   if (!name)
     error += 'name missing'
   if (!number)
@@ -67,10 +67,10 @@ app.put('/api/persons/:id', (req, res) => {
     .then(updatedPerson =>
       updatedPerson ?
         res.json(Person.format(updatedPerson))
-      :
+        :
         res.status(404).end()
     )
-    .catch(error => res.status(400).send({ error: 'malformatted id' }))
+    .catch(() => res.status(400).send({ error: 'malformatted id' }))
 })
 
 app.delete('/api/persons/:id', (req, res) =>
@@ -79,7 +79,7 @@ app.delete('/api/persons/:id', (req, res) =>
     .then(removedPerson =>
       removedPerson ?
         res.status(204).end()
-      :
+        :
         res.status(404).end()
     )
     .catch(() => res.status(400).send({ error: 'malformatted id' }))

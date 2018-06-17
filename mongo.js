@@ -29,11 +29,11 @@ else {
       })
   } else {
     Person
-    .find({})
-    .then(persons => {
-      console.log('puhelinluettelo:')
-      persons.forEach(p => console.log(`${p.name} ${p.number}`))
-      mongoose.connection.close()
-    })
+      .find({})
+      .then(persons => {
+        console.log('puhelinluettelo:')
+        persons.forEach(p => console.log(`${p.name} ${p.number}`))
+        mongoose.connection.close()
+      })
   }
 }
